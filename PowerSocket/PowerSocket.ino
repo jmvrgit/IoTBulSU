@@ -26,7 +26,7 @@ void setup() {
   poweranalyzer.print("\002M4\003"); //“\002”=STX, “\003”=ETX
   
   pinMode(relayPin, OUTPUT);
-  pinMode(relayPin, INPUT);
+  pinMode(proximityPin, INPUT);
 }
 
 void loop() {
