@@ -4,7 +4,7 @@
 #include <require_cpp11.h>
 #include <SoftwareSerial.h>
 
-#define relayPin 12
+#define relayPin 2
 #define proximityPin 0
 #define poweranalyzer_rx 3
 #define poweranalyzer_tx 2
@@ -44,8 +44,9 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-
+  Serial.println("wat");
   getID();
+  delay(1000);
 }
 
 int getID() {
