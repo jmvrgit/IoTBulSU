@@ -6,9 +6,9 @@
 #include <SoftwareSerial.h>
 
 //Pin configuration for Internet of Things Project
-//Arduino  Module Pin  
+//Arduino  Module Pin      
 //------- --------------------
-//A0    Proximity Pin Out
+//A0    Proximity Pin OUT     
 //A1    
 //A2    
 //A3    
@@ -16,14 +16,14 @@
 //A5    
 //A6    
 //A7    
-//D2    Power Analyzer TX
-//D3    Power Analyzer RX
-//D4    ESP8266/NodeMCU RX
-//D5    ESP8266/NodeMCU RST
-//D6    ESP8266/NodeMCU TX
-//D7    
+//D2    Power Analyzer RX     
+//D3    Power Analyzer TX
+//D4    ESP8266/NodeMCU TX
+//D5    
+//D6    ESP8266/NodeMCU RX
+//D7    Relay Pin IN
 //D8
-//D9    MFRC522/RFID RST
+//D9    MFRC522/RFID RST        
 //D10   MFRC522/RFID SDA
 //D11   MFRC522/RFID MOSI
 //D12   MFRC522/RFID MISO
@@ -31,7 +31,7 @@
 
 //Pins are configured for Arduino Nano
 #define proximityPin 0
-#define relayPin 1
+#define relayPin 7
 #define poweranalyzer_tx 2
 #define poweranalyzer_rx 3
 #define wifi_rx 4
@@ -47,10 +47,6 @@ MFRC522 mfrc522(mfrc522_SDA, mfrc522_RST);
 SoftwareSerial poweranalyzer(poweranalyzer_rx, poweranalyzer_tx);
 SoftwareSerial wifiSerial(wifi_rx, wifi_tx);
 
-//disabled due to reconnection issue
-//creating new ESP8266 object
-//SerialESP8266wifi wifi(wifiSerial, wifiSerial, wifi_rst, Serial); //adding Serial enabled local echo and wifi debug
-
 //MFRC522 Variables
 String UID_card = ""; // set to empty to avoid unexpected characters
 String stringTemp = ""; // same here
@@ -65,76 +61,29 @@ String raspiPORT = "2121";
 //WiFi Data to be Sent
 String powerData;
 
-String inputString;
-boolean stringComplete = false;
-unsigned long nextPing = 0;
-
-void setup() {
-  // Power socket initial Setup
-  // Different Serial Processes needs to have different baud rate to be recognized
-  poweranalyzer.begin(9600);
-  Serial.begin(19200);
-  wifiSerial.begin(9600);
-
-  Serial.println("Serial baudrate: SET");
-  //Configure to listen to devices
-  wifiSerial.listen();
-  poweranalyzer.listen();
-  Serial.println("Serial listen set to ON");
-  
-  poweranalyzer.print("\002M4\003"); //“\002”=STX, “\003”=ETX
-  Serial.println("Power Analyzer set to MODE 4");
-
-  //configure pins for Digital output and analog input
-  pinMode(relayPin, OUTPUT);
-  pinMode(proximityPin, INPUT);
-
-  Serial.println("Relay and Proximity Pins SET");
-  
-  //begin SPI interface for MFRC522
-  SPI.begin();
-  mfrc522.PCD_Init(); //Initialize MFRC522 Hardware
-  //mfrc522.PCD_SetAntennaGain(mfrc522.RxGain_max);
-
-  Serial.println("RFID Initialized");
-  
-  //begin wifi interface for ESP8266/NodeMCU
-  ATconnectToWifi();
-  
-  //wifi.setTransportToTCP();
-  //wifi.endSendWithNewline(true);
-  //wifi.begin();
-  //wifi.connectToAP(wifiSSID, wifiPASS);
-  //delay(200);
-  //wifiSerial.println("AT+CIPMUX=1");
-  //delay(2000);
-  //wifi.connectToServer(raspiIP, raspiPORT);
- // Serial.println("WIFI SET");
- // wifi.send(SERVER, "WIFI set");
+void ATconnectToWifi(){
+  Serial.println("Connecting to Wifi using AT Commands");
+  wifiSerial.println("AT+CIPCLOSE");
+  delay(5000);
+  wifiSerial.println("AT+CWMODE=1");//set to STA mode (Station mode); 1 = Station mode, 2= Access Point, 3 = Both
+  delay(2000);
+  // Set SSID and Password
+  String CWJAPString = "AT+CWJAP=\"" + wifiSSID + "\",\"" +wifiPASS+"\"";
+  wifiSerial.println(CWJAPString);
+  delay(7000);
+  // Set multiple connections to ON
+  wifiSerial.println("AT+CIPMUX=1"); 
+  delay(300);
+  // Start connection to Host
+  String CIPSTARTString = "AT+CIPSTART=1,\"TCP\",\"" + raspiIP + "\"\," + raspiPORT;
+  wifiSerial.println(CIPSTARTString);
+  delay(3000);
+  wifiSerial.println("AT+CIPSEND=1,19"); // Send to ID = 1, Length 18
+  delay(1000);
+  wifiSerial.println("WIFI_CONNECTION_OK"); // Length of this string is 18
+  delay(1000);
 }
 
-void loop() {
- // put your main code here, to run repeatedly:
- // if wifi is not started, turn it on
-
- long watthr;
- long volt;
- long amp;
- long power;
- 
- volt = random(220, 240);
- amp = random(0, 10);
- power = random(10, 2400);
- watthr = random(0, 1200);
-
- String voltString = String (volt);
- String ampString = String (amp);
- String powerString = String (power);
- String watthrString = String (watthr);
- String message = powersenddata(voltString,ampString,powerString,watthrString);
- //Serial.println(message);
- }
-}
 
 String getID() {
   String nullString = "";
@@ -162,7 +111,7 @@ void poweranalyzerfunc(){
   String volt;
   String amp;
   String power;
-  
+ 
     if (poweranalyzer.available()>0) {
       if (poweranalyzer.find("Volt")){
       volt = poweranalyzer.parseFloat();
@@ -183,20 +132,25 @@ void poweranalyzerfunc(){
       watthr = poweranalyzer.parseFloat();
       Serial.print("Watt Hours: ");
       Serial.println(watthr);
+
+      String voltString = String (volt);
+      String ampString = String (amp);
+      String powerString = String (power);
+      String watthrString = String (watthr);
+      String message = powersenddata(voltString,ampString,powerString,watthrString);
+      Serial.println(message);
     }
   }
 }
 
-void isPluggedin(){
+boolean isPluggedin(){
   if(proximitySensor() > 200){
     Serial.println("No Appliance");
+    return false;
   }
   else if (proximitySensor() < 20){
     Serial.println("Appliance Plugged IN");
-    String UID = getID();
-    if (UID != ""){
-      //send UID to Raspberry Pi for PHP/SQL execution
-    }
+    return true;
   }
 }
 
@@ -214,30 +168,130 @@ void relayOff(){
 }
 
 String powersenddata(String volt, String amp, String power, String watthr){
- String message = "[" + volt + "||" + amp + "||" + power + "||" + watthr + "]\n";
- String commandSend = "AT+CIPSEND=1," + String(message.length());
- wifiSerial.println(commandSend); //Send to ID 1, length DATALENGTH
- delay(2000);
- wifiSerial.println(message); // Print Data
- delay(2000);
- return message;
+  String message = "[" + volt + "||" + amp + "||" + power + "||" + watthr + "]\n";
+  String commandSend = "AT+CIPSEND=1," + String(message.length());
+  wifiSerial.println(commandSend); //Send to ID 1, length DATALENGTH
+  delay(2000);
+  wifiSerial.println(message); // Print Data
+  delay(2000);
+  wifiSerial.listen();
+  
+  return message;
 }
 
-void ATconnectToWifi(){
-  Serial.println("Connecting to Wifi using AT Commands");
-  wifiSerial.println("AT+CWMODE=1");//set to STA mode (Station mode); 1 = Station mode, 2= Access Point, 3 = Both
+String sendUIDtoServer(String UID){
+  UID = "UID:" + UID;
+  Serial.println(UID);
+  String commandSend = "AT+CIPSEND=1," + String(UID.length());
+  wifiSerial.println(commandSend); //Send to ID 1, length DATALENGTH
   delay(2000);
-  String CWJAPString = "AT+CWJAP=\"" + wifiSSID + "\",\"" +wifiPASS+"\"";
-  wifiSerial.println(CWJAPString);// Set SSID and Password
-  delay(7000);
-  wifiSerial.println("AT+CIPMUX=1"); // Set multiple connections to ON
+  wifiSerial.println(UID); // Print Data
   delay(2000);
-  String CIPSTARTString = "AT+CIPSTART=1,\"TCP\",\"" + raspiIP + "\"\," + raspiPORT;
-  wifiSerial.println(CIPSTARTString);
-  delay(3000);
-  wifiSerial.println("AT+CIPSEND=1,19"); // Send to ID = 1, Length 18
-  delay(1000);
-  wifiSerial.println("WIFI_CONNECTION_OK"); // Length of this string is 18
-  delay(1000);
+  return UID;
 }
 
+String sendMessagetoServer(String message){
+  Serial.println(message);
+  String commandSend = "AT+CIPSEND=1," + String(message.length());//Send to ID 1
+  wifiSerial.println(commandSend); 
+  delay(2000);
+  wifiSerial.println(message); // Print Data
+  delay(2000);
+  return message;
+}
+
+boolean checkforSocketSetting(){
+  wifiSerial.listen();
+  if (wifiSerial.available() > 0){
+    if(wifiSerial.find("+IPD")){
+      Serial.println("Server response received.");
+      int socketsetting = wifiSerial.parseInt();
+      if(socketsetting <= 0){
+        return false;
+      } 
+      else {
+        return true;
+      }
+    }
+  }
+}
+
+boolean isDataSent(){
+  wifiSerial.listen();
+  if (wifiSerial.available() > 0){
+    if(wifiSerial.find("ERROR")){
+      while(wifiSerial.find("ERROR")){
+        ATconnectToWifi();
+      }
+    }
+    else if (wifiSerial.find("OK")){
+      Serial.println("Data Sent");
+      return true;
+    }
+  }
+}
+
+void setup() {
+  // Power socket initial Setup
+  // Different Serial Processes needs to have different baud rate to be recognized
+  poweranalyzer.begin(9600);
+  Serial.begin(19200);
+  wifiSerial.begin(9600);
+
+  Serial.println("Serial baudrate: SET");
+  //Configure to listen to devices
+  wifiSerial.listen();
+  poweranalyzer.listen();
+  Serial.println("Serial listen set to ON");
+  
+  poweranalyzer.print("\002M4\003"); //“\002”=STX, “\003”=ETX
+  Serial.println("Power Analyzer set to MODE 4");
+
+  //configure pins for Digital output and analog input
+  pinMode(relayPin, OUTPUT);
+  pinMode(proximityPin, INPUT);
+
+  relayOff();
+  Serial.println("Relay and Proximity Pins SET");
+  
+  //begin SPI interface for MFRC522
+  SPI.begin();
+  mfrc522.PCD_Init(); //Initialize MFRC522 Hardware
+  //mfrc522.PCD_SetAntennaGain(mfrc522.RxGain_max);
+
+  Serial.println("RFID Initialized");
+  
+  //begin wifi interface for ESP8266/NodeMCU
+  ATconnectToWifi();
+}
+
+void loop() {
+ // put your main code here, to run repeatedly:
+ 
+ // if wifi is not started, turn it on
+  while(isPluggedin()){
+    String pluggedAppliance = getID();
+    if(pluggedAppliance != ""){
+      sendMessagetoServer("no UID found");
+      Serial.println("no UID found.");
+      
+      if(checkforSocketSetting()){
+        Serial.println("Socket Setting: Always ON");
+        relayOn();
+        poweranalyzerfunc();
+      }
+    }
+    else {
+      String UIDSent = sendUIDtoServer(pluggedAppliance);
+      Serial.println(UIDSent);
+      
+      // wait for Server Response
+      if (checkforSocketSetting()){
+        relayOn();
+      }
+      else {
+        relayOff();
+      }
+  }
+}
+}
