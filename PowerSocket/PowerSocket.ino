@@ -5,6 +5,7 @@
 #include <require_cpp11.h>
 #include <SoftwareSerial.h>
 
+
 //Pin configuration for Internet of Things Project
 //Arduino  Module Pin      
 //------- --------------------
@@ -56,7 +57,7 @@ byte readCard[4]; // MFRC522 has 4 bytes (8 Characters)
 String wifiSSID = "jonmarco";
 String wifiPASS = "jonmarco11";
 String raspiIP = "192.168.254.100"; //needs to be const char* instead of string to work
-String raspiPORT = "2121";
+String raspiPORT = "80";
 
 //WiFi Data to be Sent
 String powerData;
@@ -78,10 +79,6 @@ void ATconnectToWifi(){
   String CIPSTARTString = "AT+CIPSTART=1,\"TCP\",\"" + raspiIP + "\"\," + raspiPORT;
   wifiSerial.println(CIPSTARTString);
   delay(3000);
-  wifiSerial.println("AT+CIPSEND=1,19"); // Send to ID = 1, Length 18
-  delay(1000);
-  wifiSerial.println("WIFI_CONNECTION_OK"); // Length of this string is 18
-  delay(1000);
 }
 
 
@@ -168,14 +165,14 @@ void relayOff(){
 }
 
 String powersenddata(String volt, String amp, String power, String watthr){
-  String message = "[" + volt + "||" + amp + "||" + power + "||" + watthr + "]\n";
-  String commandSend = "AT+CIPSEND=1," + String(message.length());
+  String message = volt + "||" + amp + "||" + power + "||" + watthr;
+  String PHPmessage = "GET /powerdata.php?powerdata=" + message +" HTTP/1.1\r\nHost: " + raspiIP + ":" + raspiPORT+ "\r\n\r\n";
+  Serial.println(PHPmessage);
+  String commandSend = "AT+CIPSEND=1," + String(PHPmessage.length());
   wifiSerial.println(commandSend); //Send to ID 1, length DATALENGTH
   delay(2000);
-  wifiSerial.println(message); // Print Data
+  wifiSerial.println(PHPmessage); // Print Data
   delay(2000);
-  wifiSerial.listen();
-  
   return message;
 }
 
@@ -216,6 +213,22 @@ boolean checkforSocketSetting(){
   }
 }
 
+boolean checkforApplianceSetting(){
+  wifiSerial.listen();
+  if (wifiSerial.available() > 0){
+    if(wifiSerial.find("+IPD")){
+      Serial.println("Server response received.");
+      int socketsetting = wifiSerial.parseInt();
+      if(socketsetting <= 0){
+        return false;
+      } 
+      else {
+        return true;
+      }
+    }
+  }
+}
+
 boolean isDataSent(){
   wifiSerial.listen();
   if (wifiSerial.available() > 0){
@@ -231,6 +244,34 @@ boolean isDataSent(){
   }
 }
 
+void normalRun(){
+  while(isPluggedin()){
+    String pluggedAppliance = getID();
+    if(pluggedAppliance != ""){
+      sendMessagetoServer("no UID found");
+      Serial.println("no UID found.");
+      
+      if(checkforSocketSetting()){
+        Serial.println("Socket Setting: Always ON");
+        relayOn();
+        poweranalyzerfunc();
+      }
+    }
+    else {
+      String UIDSent = sendUIDtoServer(pluggedAppliance);
+      Serial.println(UIDSent);
+      
+      // wait for Server Response
+      if (checkforApplianceSetting()){
+        relayOn();
+        poweranalyzerfunc();
+      }
+      else {
+        relayOff();
+      }
+    }
+  }
+}
 void setup() {
   // Power socket initial Setup
   // Different Serial Processes needs to have different baud rate to be recognized
@@ -267,31 +308,5 @@ void setup() {
 
 void loop() {
  // put your main code here, to run repeatedly:
- 
- // if wifi is not started, turn it on
-  while(isPluggedin()){
-    String pluggedAppliance = getID();
-    if(pluggedAppliance != ""){
-      sendMessagetoServer("no UID found");
-      Serial.println("no UID found.");
-      
-      if(checkforSocketSetting()){
-        Serial.println("Socket Setting: Always ON");
-        relayOn();
-        poweranalyzerfunc();
-      }
-    }
-    else {
-      String UIDSent = sendUIDtoServer(pluggedAppliance);
-      Serial.println(UIDSent);
-      
-      // wait for Server Response
-      if (checkforSocketSetting()){
-        relayOn();
-      }
-      else {
-        relayOff();
-      }
-  }
-}
+  poweranalyzerfunc();
 }
