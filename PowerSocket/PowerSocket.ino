@@ -167,7 +167,6 @@ void relayOff(){
 String powersenddata(String volt, String amp, String power, String watthr){
   String message = volt + "||" + amp + "||" + power + "||" + watthr;
   String PHPmessage = "GET /powerdata.php?powerdata=" + message +" HTTP/1.1\r\nHost: " + raspiIP + ":" + raspiPORT+ "\r\n\r\n";
-  Serial.println(PHPmessage);
   String commandSend = "AT+CIPSEND=1," + String(PHPmessage.length());
   wifiSerial.println(commandSend); //Send to ID 1, length DATALENGTH
   delay(2000);
@@ -179,10 +178,11 @@ String powersenddata(String volt, String amp, String power, String watthr){
 String sendUIDtoServer(String UID){
   UID = "UID:" + UID;
   Serial.println(UID);
-  String commandSend = "AT+CIPSEND=1," + String(UID.length());
+  String PHPmessage = "GET /getUID.php?UID=" + UID +" HTTP/1.1\r\nHost: " + raspiIP + ":" + raspiPORT+ "\r\n\r\n";
+  String commandSend = "AT+CIPSEND=1," + String(PHPmessage.length());
   wifiSerial.println(commandSend); //Send to ID 1, length DATALENGTH
   delay(2000);
-  wifiSerial.println(UID); // Print Data
+  wifiSerial.println(PHPmessage); // Print Data
   delay(2000);
   return UID;
 }
