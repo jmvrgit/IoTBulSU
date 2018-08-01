@@ -7,8 +7,8 @@
 		$ampere =$AR_powerdata[1];
 		$power =$AR_powerdata[2];
 		$watthr =$AR_powerdata[3];
-		
-		$status = file_put_contents("powerfile.txt", $powerdata ."\r\n" , FILE_APPEND);
+		$date = date("c");
+		$status = file_put_contents("powerfile.txt", $powerdata . "||" . $date . "\r\n" , FILE_APPEND);
 		if ($status){
 			echo "successful";
 		}
