@@ -1,0 +1,14 @@
+{
+  "uid": "xxxxxxxx",
+  "appl-nme": "Sample Appliance",
+  "hasPwr": true,
+  "hasPwrLimit": true,
+  "hasTimeLimit": true,
+  "currDateTime": "2012-04-23T18:25:43.511Z",
+  "timeLmtVal": "2012-04-23T18:25:43.511Z",
+  "pwrLimitValue": 1123.32,
+  "currPwrUsg": 1000.323232,
+  "Img": "/image/set/app-photo1.jpg",
+  "AvgWattHr": 123.23,
+  "estPricePrHr": 23.32
+}
