@@ -15,7 +15,6 @@ class Appliance{
     public $time_limit_value;
 	public $power_limit_value;
 	public $current_power_usage;
-	public $appl_image;
 	public $avg_watthr;
 	public $estimated_cost;
  

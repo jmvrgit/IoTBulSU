@@ -41,11 +41,10 @@ if($num>0){
 			"has_power" => $has_power,
 			"has_power_limit" => $has_power_limit,
 			"has_time_limit" => $has_time_limit,
-			//"current_date_time" => $current_date_time,
-			//"time_limit_value" => $time_limit_value,
+			"current_date_time" => $current_date_time,
+			"time_limit_value" => $time_limit_value,
 			"power_limit_value" => $power_limit_value,
 			"current_power_usage" => $current_power_usage,
-			//"appl_image" => $appl_image,
 			"avg_watthr" => $avg_watthr,
 			"estimated_cost" => $estimated_cost
         );
