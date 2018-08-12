@@ -1,0 +1,11 @@
+{
+    "uid": "qwertyui",
+    "appl_name": "appliance_01",
+    "has_power": "1",
+    "has_power_limit": "1",
+    "has_time_limit": "1",
+    "power_limit_value": "23.232",
+    "current_power_usage": "12.1",
+    "avg_watthr": "123.23",
+    "estimated_cost": "23.32"
+}
