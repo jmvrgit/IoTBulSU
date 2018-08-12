@@ -143,6 +143,7 @@ void poweranalyzerfunc(){
 boolean isPluggedin(){
   if(proximitySensor() > 200){
     Serial.println("No Appliance");
+    relayOff();
     return false;
   }
   else if (proximitySensor() < 20){
@@ -157,11 +158,11 @@ int proximitySensor(){
 }
 
 void relayOn(){
-  digitalWrite(relayPin, 0);
+  digitalWrite(relayPin, HIGH);
 }
 
 void relayOff(){
-  digitalWrite(relayPin, 1);
+  digitalWrite(relayPin, LOW);
 }
 
 String powersenddata(String volt, String amp, String power, String watthr){
@@ -247,29 +248,6 @@ boolean isDataSent(){
 void normalRun(){
   while(isPluggedin()){
     String pluggedAppliance = getID();
-    if(pluggedAppliance != ""){
-      sendMessagetoServer("no UID found");
-      Serial.println("no UID found.");
-      
-      if(checkforSocketSetting()){
-        Serial.println("Socket Setting: Always ON");
-        relayOn();
-        poweranalyzerfunc();
-      }
-    }
-    else {
-      String UIDSent = sendUIDtoServer(pluggedAppliance);
-      Serial.println(UIDSent);
-      
-      // wait for Server Response
-      if (checkforApplianceSetting()){
-        relayOn();
-        poweranalyzerfunc();
-      }
-      else {
-        relayOff();
-      }
-    }
   }
 }
 void setup() {
