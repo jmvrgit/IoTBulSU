@@ -56,7 +56,7 @@ byte readCard[4]; // MFRC522 has 4 bytes (8 Characters)
 //Wifi Variables
 String wifiSSID = "jonmarco";
 String wifiPASS = "jonmarco11";
-String raspiIP = "192.168.254.100"; //needs to be const char* instead of string to work
+String raspiIP = "192.168.254.107"; //needs to be const char* instead of string to work
 String raspiPORT = "80";
 
 //WiFi Data to be Sent
@@ -70,13 +70,15 @@ void ATconnectToWifi(){
   delay(2000);
   // Set SSID and Password
   String CWJAPString = "AT+CWJAP=\"" + wifiSSID + "\",\"" +wifiPASS+"\"";
+  Serial.println(CWJAPString);
   wifiSerial.println(CWJAPString);
-  delay(7000);
+  delay(15000);
   // Set multiple connections to ON
   wifiSerial.println("AT+CIPMUX=1"); 
-  delay(300);
+  delay(10000);
   // Start connection to Host
   String CIPSTARTString = "AT+CIPSTART=1,\"TCP\",\"" + raspiIP + "\"\," + raspiPORT;
+  Serial.println(CIPSTARTString);
   wifiSerial.println(CIPSTARTString);
   delay(3000);
 }
@@ -158,11 +160,11 @@ int proximitySensor(){
 }
 
 void relayOn(){
-  digitalWrite(relayPin, HIGH);
+  digitalWrite(relayPin, LOW);
 }
 
 void relayOff(){
-  digitalWrite(relayPin, LOW);
+  digitalWrite(relayPin, HIGH);
 }
 
 String powersenddata(String volt, String amp, String power, String watthr){
@@ -255,7 +257,7 @@ void setup() {
   // Different Serial Processes needs to have different baud rate to be recognized
   poweranalyzer.begin(9600);
   Serial.begin(19200);
-  wifiSerial.begin(9600);
+  wifiSerial.begin(115200);
 
   Serial.println("Serial baudrate: SET");
   //Configure to listen to devices
@@ -282,6 +284,7 @@ void setup() {
   
   //begin wifi interface for ESP8266/NodeMCU
   ATconnectToWifi();
+
 }
 
 void loop() {
