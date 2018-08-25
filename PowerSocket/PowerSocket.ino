@@ -117,7 +117,7 @@ String getID() {
   return UID_card;
 }
 
-void poweranalyzerfunc(){
+void poweranalyzerfunc(String UID){
   String watthr;
   String volt;
   String amp;
@@ -148,7 +148,8 @@ void poweranalyzerfunc(){
       String ampString = String (amp);
       String powerString = String (power);
       String watthrString = String (watthr);
-      String message = powersenddata(voltString,ampString,powerString,watthrString);
+      //String message = powersenddata(voltString,ampString,powerString,watthrString);
+      String message = sendSignedPowerData(UID,voltString,ampString,powerString,watthrString);
       Serial.println(message);
     }
   }
@@ -184,14 +185,16 @@ void relayOff(){
   digitalWrite(relayPin, HIGH);
 }
 
+//Legacy Code for Debugging
 String powersenddata(String volt, String amp, String power, String watthr){
+  connectToHost();
   String message = volt + "||" + amp + "||" + power + "||" + watthr;
   String PHPmessage = "GET /powerdata.php?powerdata=" + message +" HTTP/1.1\r\nHost: " + raspiIP + ":" + raspiPORT+ "\r\n\r\n";
   String commandSend = "AT+CIPSEND=1," + String(PHPmessage.length());
   wifiSerial.println(commandSend); //Send to ID 1, length DATALENGTH
-  delay(2000);
+  delay(200);
   wifiSerial.println(PHPmessage); // Print Data
-  delay(3000);
+  delay(connectToHost);
   return message;
 }
 
@@ -202,7 +205,6 @@ String sendUIDtoServer(String UID){
   wifiSerial.println(commandSend); //Send to ID 1, length DATALENGTH
   delay(200);
   wifiSerial.println(PHPmessage); // Print Data
-  delay(2000);
   return UID;
 }
 
@@ -213,6 +215,20 @@ String sendMessagetoServer(String message){
   delay(2000);
   wifiSerial.println(message); // Print Data
   delay(5000);
+  return message;
+}
+
+//Legacy Code end
+
+String sendSignedPowerData(String UID, String volt, String amp, String power, String watthr){
+  connectToHost();
+  String message = volt + "||" + amp + "||" + power + "||" + watthr;
+  String PHPmessage = "GET /signedPowerData.php?UID=" + UID + "&powerdata=" + message +" HTTP/1.1\r\nHost: " + raspiIP + ":" + raspiPORT+ "\r\n\r\n";
+  String commandSend = "AT+CIPSEND=1," + String(PHPmessage.length());
+  wifiSerial.println(commandSend); //Send to ID 1, length DATALENGTH
+  delay(200);
+  wifiSerial.println(PHPmessage); // Print Data
+  delay(connectToHost);
   return message;
 }
 
@@ -248,30 +264,21 @@ boolean checkforApplianceSetting(){
   }
 }
 
-boolean isDataSent(){
-  wifiSerial.listen();
-  if (wifiSerial.available() > 0){
-    if(wifiSerial.find("ERROR")){
-        ATconnectToWifi();
-      }
-    }
-    else if (wifiSerial.find("OK")){
-      Serial.println("Data Sent");
-      return true;
-    }
-}
-
 void normalRun(){
   while(isPluggedin()){
     delay(100);
     String pluggedAppliance = getID();
     if(pluggedAppliance != ""){
       currentUID = pluggedAppliance;
-      Serial.println("Sending to Server: " + pluggedAppliance);
-      sendUIDtoServer(pluggedAppliance);
+      
+      // check if UID is allowed to have power
+      //Serial.println("Sending to Server: " + pluggedAppliance);
+      //sendUIDtoServer(pluggedAppliance);
+
       while(isPluggedin()){
         Serial.println("Previous Appliance ID: " + currentUID + " is still plugged in.");
         //send signed powerdata
+        poweranalyzerfunc(currentUID);
       }
     }
     else{
@@ -311,10 +318,10 @@ void setup() {
   
   //begin wifi interface for ESP8266/NodeMCU
   ATconnectToWifi();
-
+  Serial.println("Setup is complete!);
 }
 
 void loop() {
  // put your main code here, to run repeatedly:
- normalRun();
+  normalRun();
 }
