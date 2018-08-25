@@ -40,6 +40,8 @@
 #define wifi_tx 6
 #define mfrc522_RST 9
 #define mfrc522_SDA 10
+#define proximity_threshold_upper 512
+#define proximity_threshold_lower 40
 
 //Configure RFID Interface
 MFRC522 mfrc522(mfrc522_SDA, mfrc522_RST);
@@ -61,29 +63,39 @@ String raspiPORT = "80";
 
 //WiFi Data to be Sent
 String powerData;
+String currentUID = "";
 
 void ATconnectToWifi(){
   Serial.println("Connecting to Wifi using AT Commands");
-  wifiSerial.println("AT+CIPCLOSE");
-  delay(5000);
+  disconnectToHost();
   wifiSerial.println("AT+CWMODE=1");//set to STA mode (Station mode); 1 = Station mode, 2= Access Point, 3 = Both
-  delay(2000);
+  delay(200);
   // Set SSID and Password
   String CWJAPString = "AT+CWJAP=\"" + wifiSSID + "\",\"" +wifiPASS+"\"";
   Serial.println(CWJAPString);
   wifiSerial.println(CWJAPString);
-  delay(15000);
+  delay(7500);
   // Set multiple connections to ON
   wifiSerial.println("AT+CIPMUX=1"); 
-  delay(10000);
+  delay(200);
   // Start connection to Host
   String CIPSTARTString = "AT+CIPSTART=1,\"TCP\",\"" + raspiIP + "\"\," + raspiPORT;
   Serial.println(CIPSTARTString);
   wifiSerial.println(CIPSTARTString);
-  delay(3000);
+  delay(300);
 }
 
+void disconnectToHost(){
+  wifiSerial.println("AT+CIPCLOSE");
+  delay(200);
+}
 
+void connectToHost(){
+  String CIPSTARTString = "AT+CIPSTART=1,\"TCP\",\"" + raspiIP + "\"\," + raspiPORT;
+  Serial.println(CIPSTARTString);
+  wifiSerial.println(CIPSTARTString);
+  delay(200);
+}
 String getID() {
   String nullString = "";
   if ( ! mfrc522.PICC_IsNewCardPresent()) { //If a new PICC placed to RFID reader continues
@@ -142,13 +154,18 @@ void poweranalyzerfunc(){
   }
 }
 
+void clearUIDMemory(){
+  currentUID = "";
+}
+
 boolean isPluggedin(){
-  if(proximitySensor() > 200){
+  if(proximitySensor() > proximity_threshold_upper){
     Serial.println("No Appliance");
     relayOff();
+    clearUIDMemory();
     return false;
   }
-  else if (proximitySensor() < 20){
+  else if (proximitySensor() < proximity_threshold_lower){
     Serial.println("Appliance Plugged IN");
     return true;
   }
@@ -174,17 +191,16 @@ String powersenddata(String volt, String amp, String power, String watthr){
   wifiSerial.println(commandSend); //Send to ID 1, length DATALENGTH
   delay(2000);
   wifiSerial.println(PHPmessage); // Print Data
-  delay(2000);
+  delay(3000);
   return message;
 }
 
 String sendUIDtoServer(String UID){
-  UID = "UID:" + UID;
-  Serial.println(UID);
+  connectToHost();
   String PHPmessage = "GET /getUID.php?UID=" + UID +" HTTP/1.1\r\nHost: " + raspiIP + ":" + raspiPORT+ "\r\n\r\n";
   String commandSend = "AT+CIPSEND=1," + String(PHPmessage.length());
   wifiSerial.println(commandSend); //Send to ID 1, length DATALENGTH
-  delay(2000);
+  delay(200);
   wifiSerial.println(PHPmessage); // Print Data
   delay(2000);
   return UID;
@@ -196,7 +212,7 @@ String sendMessagetoServer(String message){
   wifiSerial.println(commandSend); 
   delay(2000);
   wifiSerial.println(message); // Print Data
-  delay(2000);
+  delay(5000);
   return message;
 }
 
@@ -236,7 +252,6 @@ boolean isDataSent(){
   wifiSerial.listen();
   if (wifiSerial.available() > 0){
     if(wifiSerial.find("ERROR")){
-      while(wifiSerial.find("ERROR")){
         ATconnectToWifi();
       }
     }
@@ -244,12 +259,24 @@ boolean isDataSent(){
       Serial.println("Data Sent");
       return true;
     }
-  }
 }
 
 void normalRun(){
   while(isPluggedin()){
+    delay(100);
     String pluggedAppliance = getID();
+    if(pluggedAppliance != ""){
+      currentUID = pluggedAppliance;
+      Serial.println("Sending to Server: " + pluggedAppliance);
+      sendUIDtoServer(pluggedAppliance);
+      while(isPluggedin()){
+        Serial.println("Previous Appliance ID: " + currentUID + " is still plugged in.");
+        //send signed powerdata
+      }
+    }
+    else{
+      Serial.println("No UID found!");
+    }
   }
 }
 void setup() {
@@ -289,5 +316,5 @@ void setup() {
 
 void loop() {
  // put your main code here, to run repeatedly:
-  poweranalyzerfunc();
+ normalRun();
 }
