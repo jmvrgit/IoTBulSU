@@ -5,7 +5,6 @@
 #include <require_cpp11.h>
 #include <SoftwareSerial.h>
 
-
 //Pin configuration for Internet of Things Project
 //Arduino  Module Pin      
 //------- --------------------
@@ -40,6 +39,8 @@
 #define wifi_tx 6
 #define mfrc522_RST 9
 #define mfrc522_SDA 10
+
+//Sensitivity
 #define proximity_threshold_upper 512
 #define proximity_threshold_lower 40
 
@@ -62,7 +63,6 @@ String raspiIP = "192.168.254.107"; //needs to be const char* instead of string 
 String raspiPORT = "80";
 
 //WiFi Data to be Sent
-String powerData;
 String currentUID = "";
 
 void ATconnectToWifi(){
@@ -116,6 +116,10 @@ String getID() {
   mfrc522.PICC_HaltA(); // Stop reading
   return UID_card;
 }
+void resetWattHour(){
+  poweranalyzer.print("\002R\003"); //“\002”=STX, “\003”=ETX
+  Serial.println("Power Analyzer Watt-Hr Reset");
+}
 
 void poweranalyzerfunc(String UID){
   String watthr;
@@ -125,32 +129,32 @@ void poweranalyzerfunc(String UID){
  
     if (poweranalyzer.available()>0) {
       if (poweranalyzer.find("Volt")){
-      volt = poweranalyzer.parseFloat();
-      Serial.print("Voltage: ");
-      Serial.println(volt);
+        volt = poweranalyzer.parseFloat();
+        Serial.print("Voltage: ");
+        Serial.println(volt);
     }
       if (poweranalyzer.find("Amp")){
-      amp = poweranalyzer.parseFloat();
-      Serial.print("Current: ");
-      Serial.println(amp);
+        amp = poweranalyzer.parseFloat();
+        Serial.print("Current: ");
+        Serial.println(amp);
     }
-       if (poweranalyzer.find("Watt")){
-      power = poweranalyzer.parseFloat();
-      Serial.print("Current: ");
-      Serial.println(power);
+      if (poweranalyzer.find("Watt")){
+        power = poweranalyzer.parseFloat();
+        Serial.print("Current: ");
+        Serial.println(power);
     }
-     if (poweranalyzer.find("Watt-Hr")){
-      watthr = poweranalyzer.parseFloat();
-      Serial.print("Watt Hours: ");
-      Serial.println(watthr);
-
-      String voltString = String (volt);
-      String ampString = String (amp);
-      String powerString = String (power);
-      String watthrString = String (watthr);
-      //String message = powersenddata(voltString,ampString,powerString,watthrString);
-      String message = sendSignedPowerData(UID,voltString,ampString,powerString,watthrString);
-      Serial.println(message);
+      if (poweranalyzer.find("Watt-Hr")){
+        watthr = poweranalyzer.parseFloat();
+        Serial.print("Watt Hours: ");
+        Serial.println(watthr);
+  
+        String voltString = String (volt);
+        String ampString = String (amp);
+        String powerString = String (power);
+        String watthrString = String (watthr);
+        //String message = powersenddata(voltString,ampString,powerString,watthrString);
+        String message = sendSignedPowerData(UID,voltString,ampString,powerString,watthrString);
+        Serial.println(message);
     }
   }
 }
@@ -276,16 +280,20 @@ void normalRun(){
       //sendUIDtoServer(pluggedAppliance);
 
       while(isPluggedin()){
+        relayOn();
         Serial.println("Previous Appliance ID: " + currentUID + " is still plugged in.");
         //send signed powerdata
         poweranalyzerfunc(currentUID);
       }
+        relayOff();
+        resetWattHour();
     }
     else{
       Serial.println("No UID found!");
     }
   }
 }
+
 void setup() {
   // Power socket initial Setup
   // Different Serial Processes needs to have different baud rate to be recognized
@@ -318,10 +326,10 @@ void setup() {
   
   //begin wifi interface for ESP8266/NodeMCU
   ATconnectToWifi();
-  Serial.println("Setup is complete!);
+  Serial.println("Setup is complete!");
 }
 
 void loop() {
  // put your main code here, to run repeatedly:
-  normalRun();
+ normalRun();
 }
