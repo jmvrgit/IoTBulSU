@@ -65,6 +65,8 @@ String raspiPORT = "80";
 //WiFi Data to be Sent
 String currentUID = "";
 
+//Connect to Wifi at Start UP
+//being called at the Setup phase
 void ATconnectToWifi(){
   Serial.println("Connecting to Wifi using AT Commands");
   disconnectToHost();
@@ -116,6 +118,7 @@ String getID() {
   mfrc522.PICC_HaltA(); // Stop reading
   return UID_card;
 }
+//send reset signal to Power Analyzer
 void resetWattHour(){
   poweranalyzer.print("\002R\003"); //“\002”=STX, “\003”=ETX
   Serial.println("Power Analyzer Watt-Hr Reset");
@@ -198,7 +201,7 @@ String powersenddata(String volt, String amp, String power, String watthr){
   wifiSerial.println(commandSend); //Send to ID 1, length DATALENGTH
   delay(200);
   wifiSerial.println(PHPmessage); // Print Data
-  delay(connectToHost);
+  delay(3000);
   return message;
 }
 
@@ -224,6 +227,7 @@ String sendMessagetoServer(String message){
 
 //Legacy Code end
 
+//Send power data together with current UID that uses the power socket
 String sendSignedPowerData(String UID, String volt, String amp, String power, String watthr){
   connectToHost();
   String message = volt + "||" + amp + "||" + power + "||" + watthr;
@@ -232,10 +236,11 @@ String sendSignedPowerData(String UID, String volt, String amp, String power, St
   wifiSerial.println(commandSend); //Send to ID 1, length DATALENGTH
   delay(200);
   wifiSerial.println(PHPmessage); // Print Data
-  delay(connectToHost);
+  delay(3000);
   return message;
 }
 
+//I forgot what this is for
 boolean checkforSocketSetting(){
   wifiSerial.listen();
   if (wifiSerial.available() > 0){
@@ -252,6 +257,8 @@ boolean checkforSocketSetting(){
   }
 }
 
+//have not been tested
+//should be done after UID has been sent to Server
 boolean checkforApplianceSetting(){
   wifiSerial.listen();
   if (wifiSerial.available() > 0){
@@ -264,6 +271,34 @@ boolean checkforApplianceSetting(){
       else {
         return true;
       }
+    }
+  }
+}
+
+void noUIDFoundNotif(){
+  connectToHost();
+  String PHPmessage = "GET /noUIDFound.php" + String(" HTTP/1.1\r\nHost: ") + raspiIP + ":" + raspiPORT + "\r\n\r\n";
+  String commandSend = "AT+CIPSEND=1," + String(PHPmessage.length());
+  wifiSerial.println(commandSend); //Send to ID 1, length DATALENGTH
+  delay(200);
+  wifiSerial.println(PHPmessage); // Print Data
+  delay(3000);
+
+  //Then pop out notification in Application
+}
+
+void receiveCommand(){
+  wifiSerial.listen();
+  if (wifiSerial.available() > 0){
+    if(wifiSerial.find("ON")){
+      relayOn();
+
+      //then send that the command has been executed
+    }
+    if(wifiSerial.find("OFF")){
+      relayOff();
+
+      //then send that the command has been executed
     }
   }
 }
@@ -290,6 +325,7 @@ void normalRun(){
     }
     else{
       Serial.println("No UID found!");
+      noUIDFoundNotif();
     }
   }
 }
