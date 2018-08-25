@@ -10,19 +10,6 @@
 		else {
 			echo "failed write";
 		}
-		
-		
-		$servername = "";
-		$username = "";
-		$password = "";
-		$database = "";
-		
-		//Create msql connection
-		$connect = new msqli($servername, $username, $password, $database) or die ("Connection Failed");
-		
-		function CloseConnection($conn){
-			$conn -> close();
-		}
 		?>
 	<body>
 </html>
