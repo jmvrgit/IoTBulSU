@@ -324,8 +324,8 @@ void normalRun(){
         relayOn();
         Serial.println("Previous Appliance ID: " + currentUID + " is still plugged in.");
         //send signed powerdata
-        poweranalyzerfunc(currentUID);
       }
+        poweranalyzerfunc(currentUID);
         relayOff();
         resetWattHour();
     }
