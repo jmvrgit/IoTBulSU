@@ -19,7 +19,7 @@
 //D2    Power Analyzer RX     
 //D3    Power Analyzer TX
 //D4    ESP8266/NodeMCU TX
-//D5    
+//D5    ESP8266/NodeMCU RST  -- can be removed
 //D6    ESP8266/NodeMCU RX
 //D7    Relay Pin IN
 //D8
@@ -35,7 +35,7 @@
 #define poweranalyzer_tx 2
 #define poweranalyzer_rx 3
 #define wifi_rx 4
-#define wifi_rst 5
+//#define wifi_rst 5
 #define wifi_tx 6
 #define mfrc522_RST 9
 #define mfrc522_SDA 10
@@ -56,10 +56,11 @@ String UID_card = ""; // set to empty to avoid unexpected characters
 String stringTemp = ""; // same here
 byte readCard[4]; // MFRC522 has 4 bytes (8 Characters)
 
+//Change this to Raspberry Pi configuration
 //Wifi Variables
 String wifiSSID = "jonmarco";
 String wifiPASS = "jonmarco11";
-String raspiIP = "192.168.254.107"; //needs to be const char* instead of string to work
+String raspiIP = "192.168.254.107";
 String raspiPORT = "80";
 
 //WiFi Data to be Sent
@@ -98,6 +99,7 @@ void connectToHost(){
   wifiSerial.println(CIPSTARTString);
   delay(200);
 }
+
 String getID() {
   String nullString = "";
   if ( ! mfrc522.PICC_IsNewCardPresent()) { //If a new PICC placed to RFID reader continues
@@ -118,6 +120,7 @@ String getID() {
   mfrc522.PICC_HaltA(); // Stop reading
   return UID_card;
 }
+
 //send reset signal to Power Analyzer
 void resetWattHour(){
   poweranalyzer.print("\002R\003"); //“\002”=STX, “\003”=ETX
@@ -143,19 +146,24 @@ void poweranalyzerfunc(String UID){
     }
       if (poweranalyzer.find("Watt")){
         power = poweranalyzer.parseFloat();
-        Serial.print("Current: ");
+        Serial.print("Power: ");
         Serial.println(power);
     }
       if (poweranalyzer.find("Watt-Hr")){
         watthr = poweranalyzer.parseFloat();
         Serial.print("Watt Hours: ");
         Serial.println(watthr);
-  
+
+        //convert everything to string
         String voltString = String (volt);
         String ampString = String (amp);
         String powerString = String (power);
         String watthrString = String (watthr);
+
+        //Uncomment to Send power data only
         //String message = powersenddata(voltString,ampString,powerString,watthrString);
+
+        //Send power data with UID
         String message = sendSignedPowerData(UID,voltString,ampString,powerString,watthrString);
         Serial.println(message);
     }
@@ -240,7 +248,7 @@ String sendSignedPowerData(String UID, String volt, String amp, String power, St
   return message;
 }
 
-//I forgot what this is for
+//only useful for node connections
 boolean checkforSocketSetting(){
   wifiSerial.listen();
   if (wifiSerial.available() > 0){
@@ -256,9 +264,7 @@ boolean checkforSocketSetting(){
     }
   }
 }
-
-//have not been tested
-//should be done after UID has been sent to Server
+//only useful for node connections
 boolean checkforApplianceSetting(){
   wifiSerial.listen();
   if (wifiSerial.available() > 0){
