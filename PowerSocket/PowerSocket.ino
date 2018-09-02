@@ -19,7 +19,7 @@
 //D2    Power Analyzer RX     
 //D3    Power Analyzer TX
 //D4    ESP8266/NodeMCU TX
-//D5    ESP8266/NodeMCU RST  -- can be removed
+//D5    ESP8266/NodeMCU RST
 //D6    ESP8266/NodeMCU RX
 //D7    Relay Pin IN
 //D8
@@ -35,7 +35,7 @@
 #define poweranalyzer_tx 2
 #define poweranalyzer_rx 3
 #define wifi_rx 4
-//#define wifi_rst 5
+#define wifi_rst 5
 #define wifi_tx 6
 #define mfrc522_RST 9
 #define mfrc522_SDA 10
@@ -132,8 +132,8 @@ void poweranalyzerfunc(String UID){
   String volt;
   String amp;
   String power;
- 
-    if (poweranalyzer.available()>0) {
+  
+  if (poweranalyzer.available()>0) {
       if (poweranalyzer.find("Volt")){
         volt = poweranalyzer.parseFloat();
         Serial.print("Voltage: ");
@@ -176,13 +176,13 @@ void clearUIDMemory(){
 
 boolean isPluggedin(){
   if(proximitySensor() > proximity_threshold_upper){
-    Serial.println("No Appliance");
+    //Serial.println("No Appliance");
     relayOff();
     clearUIDMemory();
     return false;
   }
   else if (proximitySensor() < proximity_threshold_lower){
-    Serial.println("Appliance Plugged IN");
+    //Serial.println("Appliance Plugged IN");
     return true;
   }
 }
@@ -223,16 +223,6 @@ String sendUIDtoServer(String UID){
   return UID;
 }
 
-String sendMessagetoServer(String message){
-  Serial.println(message);
-  String commandSend = "AT+CIPSEND=1," + String(message.length());//Send to ID 1
-  wifiSerial.println(commandSend); 
-  delay(2000);
-  wifiSerial.println(message); // Print Data
-  delay(5000);
-  return message;
-}
-
 //Legacy Code end
 
 //Send power data together with current UID that uses the power socket
@@ -244,42 +234,10 @@ String sendSignedPowerData(String UID, String volt, String amp, String power, St
   wifiSerial.println(commandSend); //Send to ID 1, length DATALENGTH
   delay(200);
   wifiSerial.println(PHPmessage); // Print Data
-  delay(3000);
   return message;
 }
 
 //only useful for node connections
-boolean checkforSocketSetting(){
-  wifiSerial.listen();
-  if (wifiSerial.available() > 0){
-    if(wifiSerial.find("+IPD")){
-      Serial.println("Server response received.");
-      int socketsetting = wifiSerial.parseInt();
-      if(socketsetting <= 0){
-        return false;
-      } 
-      else {
-        return true;
-      }
-    }
-  }
-}
-//only useful for node connections
-boolean checkforApplianceSetting(){
-  wifiSerial.listen();
-  if (wifiSerial.available() > 0){
-    if(wifiSerial.find("+IPD")){
-      Serial.println("Server response received.");
-      int socketsetting = wifiSerial.parseInt();
-      if(socketsetting <= 0){
-        return false;
-      } 
-      else {
-        return true;
-      }
-    }
-  }
-}
 
 void noUIDFoundNotif(){
   connectToHost();
@@ -288,23 +246,16 @@ void noUIDFoundNotif(){
   wifiSerial.println(commandSend); //Send to ID 1, length DATALENGTH
   delay(200);
   wifiSerial.println(PHPmessage); // Print Data
-  delay(3000);
-
   //Then pop out notification in Application
 }
 
-void receiveCommand(){
-  wifiSerial.listen();
-  if (wifiSerial.available() > 0){
-    if(wifiSerial.find("ON")){
-      relayOn();
-      //then send that the command has been executed
-    }
-    if(wifiSerial.find("OFF")){
-      relayOff();
-      //then send that the command has been executed
-    }
+void findJSON(){
+  Serial.println("wifiSerial is Listening");
+  while (wifiSerial.available() > 0){
+      String c = wifiSerial.readString();
+      Serial.print(c);
   }
+
 }
 
 void normalRun(){
@@ -317,13 +268,17 @@ void normalRun(){
       // check if UID is allowed to have power
       //Serial.println("Sending to Server: " + pluggedAppliance);
       //sendUIDtoServer(pluggedAppliance);
-
+      
       while(isPluggedin()){
         relayOn();
-        Serial.println("Previous Appliance ID: " + currentUID + " is still plugged in.");
         //send signed powerdata
-      }
+        //poweranalyzer.listen();
         poweranalyzerfunc(currentUID);
+        //delay(100);
+        //wifiSerial.listen();
+        //findJSON();
+        //delay(100);
+      }
         relayOff();
         resetWattHour();
     }
@@ -339,7 +294,7 @@ void setup() {
   // Different Serial Processes needs to have different baud rate to be recognized
   poweranalyzer.begin(9600);
   Serial.begin(19200);
-  wifiSerial.begin(115200);
+  wifiSerial.begin(4800);
 
   Serial.println("Serial baudrate: SET");
   //Configure to listen to devices
