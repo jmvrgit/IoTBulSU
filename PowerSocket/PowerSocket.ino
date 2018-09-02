@@ -298,12 +298,10 @@ void receiveCommand(){
   if (wifiSerial.available() > 0){
     if(wifiSerial.find("ON")){
       relayOn();
-
       //then send that the command has been executed
     }
     if(wifiSerial.find("OFF")){
       relayOff();
-
       //then send that the command has been executed
     }
   }
