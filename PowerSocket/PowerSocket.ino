@@ -134,26 +134,39 @@ void poweranalyzerfunc(String UID){
   String power;
   
   if (poweranalyzer.available()>0) {
+    
       if (poweranalyzer.find("Volt")){
+        if (isPluggedin() == false){
+          return;
+        }
         volt = poweranalyzer.parseFloat();
-        Serial.print("Voltage: ");
-        Serial.println(volt);
+       //Serial.print("Voltage: ");
+        //Serial.println(volt);
     }
       if (poweranalyzer.find("Amp")){
+        if (isPluggedin() == false){
+          return;
+        }
         amp = poweranalyzer.parseFloat();
-        Serial.print("Current: ");
-        Serial.println(amp);
+        //Serial.print("Current: ");
+        //Serial.println(amp);
     }
       if (poweranalyzer.find("Watt")){
+        if (isPluggedin() == false){
+          return;
+        }
         power = poweranalyzer.parseFloat();
-        Serial.print("Power: ");
-        Serial.println(power);
+        //Serial.print("Power: ");
+        //Serial.println(power);
     }
       if (poweranalyzer.find("Watt-Hr")){
+        if (isPluggedin() == false){
+          return;
+        }
         watthr = poweranalyzer.parseFloat();
-        Serial.print("Watt Hours: ");
-        Serial.println(watthr);
-
+        //Serial.print("Watt Hours: ");
+        //Serial.println(watthr);
+        
         //convert everything to string
         String voltString = String (volt);
         String ampString = String (amp);
@@ -194,10 +207,12 @@ int proximitySensor(){
 
 void relayOn(){
   digitalWrite(relayPin, LOW);
+  Serial.println("Relay ON");
 }
 
 void relayOff(){
   digitalWrite(relayPin, HIGH);
+  Serial.println("Relay OFF");
 }
 
 //Legacy Code for Debugging
@@ -234,14 +249,16 @@ String sendSignedPowerData(String UID, String volt, String amp, String power, St
   wifiSerial.println(commandSend); //Send to ID 1, length DATALENGTH
   delay(200);
   wifiSerial.println(PHPmessage); // Print Data
-  return message;
+
+  String catMessage = UID + "||" + message;
+  return catMessage;
 }
 
 //only useful for node connections
 
 void noUIDFoundNotif(){
   connectToHost();
-  String PHPmessage = "GET /noUIDFound.php" + String(" HTTP/1.1\r\nHost: ") + raspiIP + ":" + raspiPORT + "\r\n\r\n";
+  String PHPmessage = "GET /noUIDFound.php?UID=NO_UID" + String(" HTTP/1.1\r\nHost: ") + raspiIP + ":" + raspiPORT + "\r\n\r\n";
   String commandSend = "AT+CIPSEND=1," + String(PHPmessage.length());
   wifiSerial.println(commandSend); //Send to ID 1, length DATALENGTH
   delay(200);
@@ -250,41 +267,34 @@ void noUIDFoundNotif(){
 }
 
 void findJSON(){
-  Serial.println("wifiSerial is Listening");
+  //Serial.println("wifiSerial is Listening");
+  Serial.print("");
   while (wifiSerial.available() > 0){
       String c = wifiSerial.readString();
       Serial.print(c);
   }
-
 }
 
-void normalRun(){
-  while(isPluggedin()){
-    delay(100);
-    String pluggedAppliance = getID();
-    if(pluggedAppliance != ""){
-      currentUID = pluggedAppliance;
-      
-      // check if UID is allowed to have power
-      //Serial.println("Sending to Server: " + pluggedAppliance);
-      //sendUIDtoServer(pluggedAppliance);
-      
-      while(isPluggedin()){
+void parseJSON(){
+  int has_power;
+  Serial.print("");
+  while (wifiSerial.available() > 0){
+    if (wifiSerial.find("\"has\_power\"\: \"")){
+      has_power = wifiSerial.parseInt();
+      Serial.print("has_power:");
+      Serial.println(has_power);
+      if (has_power == 1){
         relayOn();
-        //send signed powerdata
-        //poweranalyzer.listen();
-        poweranalyzerfunc(currentUID);
-        //delay(100);
-        //wifiSerial.listen();
-        //findJSON();
-        //delay(100);
+        break;
       }
+      else {
         relayOff();
-        resetWattHour();
-    }
-    else{
-      Serial.println("No UID found!");
-      noUIDFoundNotif();
+        break;
+      }
+     if (wifiSerial.find("\1\,CLOSED")) {
+     Serial.println("CLOSED");
+        break;
+     }
     }
   }
 }
@@ -326,5 +336,36 @@ void setup() {
 
 void loop() {
  // put your main code here, to run repeatedly:
- normalRun();
+  while(isPluggedin()){
+    delay(100);
+    String pluggedAppliance = getID();
+    if(pluggedAppliance != ""){
+      currentUID = pluggedAppliance;
+      
+      // check if UID is allowed to have power
+      //Serial.println("Sending to Server: " + pluggedAppliance);
+      //sendUIDtoServer(pluggedAppliance);
+      
+      while(isPluggedin()){
+        //relayOn();
+        //send signed powerdata
+        poweranalyzer.listen();
+        poweranalyzerfunc(currentUID);
+        //delay(100);
+        wifiSerial.listen();
+        //findJSON();
+        parseJSON();
+        //delay(100);
+      }
+        relayOff();
+        resetWattHour();
+    }
+    else{
+      Serial.println("No UID found!");
+      noUIDFoundNotif();
+      delay(100);
+      wifiSerial.listen();
+      parseJSON();
+    }
+  }
 }
