@@ -66,6 +66,8 @@ String raspiPORT = "80";
 //WiFi Data to be Sent
 String currentUID = "";
 
+//boolean for switching between Serial ports
+boolean isItMyTurn = true;
 //Connect to Wifi at Start UP
 //being called at the Setup phase
 void ATconnectToWifi(){
@@ -132,7 +134,7 @@ void poweranalyzerfunc(String UID){
   String volt;
   String amp;
   String power;
-  
+  poweranalyzer.listen();
   if (poweranalyzer.available()>0) {
     
       if (poweranalyzer.find("Volt")){
@@ -178,6 +180,7 @@ void poweranalyzerfunc(String UID){
 
         //Send power data with UID
         String message = sendSignedPowerData(UID,voltString,ampString,powerString,watthrString);
+        isItMyTurn = false;
         Serial.println(message);
     }
   }
@@ -267,34 +270,34 @@ void noUIDFoundNotif(){
 }
 
 void findJSON(){
+  wifiSerial.listen();
   //Serial.println("wifiSerial is Listening");
   Serial.print("");
-  while (wifiSerial.available() > 0){
+  while (wifiSerial.available() > 0 && isItMyTurn == false){
       String c = wifiSerial.readString();
       Serial.print(c);
+      isItMyTurn = true;
   }
 }
 
 void parseJSON(){
   int has_power;
   Serial.print("");
-  while (wifiSerial.available() > 0){
-    if (wifiSerial.find("\"has\_power\"\: \"")){
-      has_power = wifiSerial.parseInt();
-      Serial.print("has_power:");
-      Serial.println(has_power);
-      if (has_power == 1){
-        relayOn();
-        break;
-      }
-      else {
-        relayOff();
-        break;
-      }
-     if (wifiSerial.find("\1\,CLOSED")) {
-     Serial.println("CLOSED");
-        break;
-     }
+  wifiSerial.listen();
+  while (wifiSerial.available() > 0 && isItMyTurn == false){
+    String c = wifiSerial.readString();
+    Serial.print(c);
+    if (c.indexOf("\"has\_power\"\: \"0\"") > 0){
+      Serial.print("has_power: 0");
+      relayOff();
+      isItMyTurn = true;
+      break;
+    }
+    if (c.indexOf("\"has\_power\"\: \"1\"") > 0){
+      Serial.print("has_power: 1");
+      relayOn();
+      isItMyTurn = true;
+      break;
     }
   }
 }
@@ -349,23 +352,34 @@ void loop() {
       while(isPluggedin()){
         //relayOn();
         //send signed powerdata
-        poweranalyzer.listen();
-        poweranalyzerfunc(currentUID);
-        //delay(100);
-        wifiSerial.listen();
+        if(isItMyTurn == true){
+          poweranalyzerfunc(currentUID);
+        }
+        else {
         //findJSON();
         parseJSON();
         //delay(100);
-      }
-        relayOff();
-        resetWattHour();
+        }
+     }
     }
-    else{
+    else {
       Serial.println("No UID found!");
-      noUIDFoundNotif();
-      delay(100);
-      wifiSerial.listen();
-      parseJSON();
+      //noUIDFoundNotif();
+      //delay(100);
+      currentUID = "NO_UID";
+      while(isPluggedin()){
+        if(isItMyTurn == true){
+        poweranalyzerfunc(currentUID);
+        } else {
+        //findJSON();
+        parseJSON();
+        }
+      }
+
     }
+    
   }
+      relayOff();
+      resetWattHour();
 }
+
