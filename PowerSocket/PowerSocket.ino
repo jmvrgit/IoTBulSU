@@ -132,7 +132,8 @@ void poweranalyzerfunc(String UID){
   String volt;
   String amp;
   String power;
-  
+
+  String voltString,ampString,powerString,watthrString;
   if (poweranalyzer.available()>0) {
     
       if (poweranalyzer.find("Volt")){
@@ -148,6 +149,8 @@ void poweranalyzerfunc(String UID){
           return;
         }
         amp = poweranalyzer.parseFloat();
+        String voltString = String (volt);
+        String ampString = String (amp);
         //Serial.print("Current: ");
         //Serial.println(amp);
     }
@@ -156,6 +159,7 @@ void poweranalyzerfunc(String UID){
           return;
         }
         power = poweranalyzer.parseFloat();
+        String powerString = String (power);
         //Serial.print("Power: ");
         //Serial.println(power);
     }
@@ -164,14 +168,9 @@ void poweranalyzerfunc(String UID){
           return;
         }
         watthr = poweranalyzer.parseFloat();
+        String watthrString = String (watthr);
         //Serial.print("Watt Hours: ");
         //Serial.println(watthr);
-        
-        //convert everything to string
-        String voltString = String (volt);
-        String ampString = String (amp);
-        String powerString = String (power);
-        String watthrString = String (watthr);
 
         //Uncomment to Send power data only
         //String message = powersenddata(voltString,ampString,powerString,watthrString);
@@ -369,3 +368,4 @@ void loop() {
     }
   }
 }
+
