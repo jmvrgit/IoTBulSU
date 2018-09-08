@@ -128,19 +128,20 @@ void resetWattHour(){
 }
 
 void poweranalyzerfunc(String UID){
-  String watthr;
-  String volt;
-  String amp;
-  String power;
-
+  float watthr;
+  float volt;
+  float amp;
+  float power;
   String voltString,ampString,powerString,watthrString;
+
+  poweranalyzer.listen();
   if (poweranalyzer.available()>0) {
-    
       if (poweranalyzer.find("Volt")){
         if (isPluggedin() == false){
           return;
         }
         volt = poweranalyzer.parseFloat();
+        voltString = String (volt);
        //Serial.print("Voltage: ");
         //Serial.println(volt);
     }
@@ -149,8 +150,7 @@ void poweranalyzerfunc(String UID){
           return;
         }
         amp = poweranalyzer.parseFloat();
-        String voltString = String (volt);
-        String ampString = String (amp);
+        ampString = String (amp);
         //Serial.print("Current: ");
         //Serial.println(amp);
     }
@@ -159,7 +159,7 @@ void poweranalyzerfunc(String UID){
           return;
         }
         power = poweranalyzer.parseFloat();
-        String powerString = String (power);
+        powerString = String (power);
         //Serial.print("Power: ");
         //Serial.println(power);
     }
@@ -168,7 +168,7 @@ void poweranalyzerfunc(String UID){
           return;
         }
         watthr = poweranalyzer.parseFloat();
-        String watthrString = String (watthr);
+        watthrString = String (watthr);
         //Serial.print("Watt Hours: ");
         //Serial.println(watthr);
 
@@ -211,7 +211,7 @@ void relayOn(){
 
 void relayOff(){
   digitalWrite(relayPin, HIGH);
-  Serial.println("Relay OFF");
+  //Serial.println("Relay OFF");
 }
 
 //Legacy Code for Debugging
@@ -277,6 +277,7 @@ void findJSON(){
 void parseJSON(){
   int has_power;
   Serial.print("");
+  wifiSerial.listen();
   while (wifiSerial.available() > 0){
     if (wifiSerial.find("\"has\_power\"\: \"")){
       has_power = wifiSerial.parseInt();
@@ -348,10 +349,10 @@ void loop() {
       while(isPluggedin()){
         //relayOn();
         //send signed powerdata
-        poweranalyzer.listen();
+        
         poweranalyzerfunc(currentUID);
         //delay(100);
-        wifiSerial.listen();
+
         //findJSON();
         parseJSON();
         //delay(100);
