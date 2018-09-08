@@ -293,13 +293,20 @@ void parseJSON(){
       Serial.println("has_power: 0");
       relayOff();
       isItMyTurn = true;
-      
+      break;
     }
     if (c.indexOf("\"has\_power\"\: \"1\"") > 0){
       Serial.println("has_power: 1");
       relayOn();
       isItMyTurn = true;
-      
+      break;
+    }
+
+    if (c.indexOf("1,CLOSED") > 0){
+      Serial.println("Connection Lost, Reconnecting...");
+      ATconnectToWifi();
+      isItMyTurn = true;
+      break;
     }
   }
 }
