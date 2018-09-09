@@ -1,13 +1,3 @@
 {
-    "uid": "qwertyui",
-    "appl_name": "appliance_01",
-    "has_power": "1",
-    "has_power_limit": "1",
-    "has_time_limit": "1",
-    "current_date_time": "2018-08-12 03:15:12",
-    "time_limit_value": "2018-08-12 07:09:10",
-    "power_limit_value": "23.232",
-    "current_power_usage": "12.1",
-    "avg_watthr": "123.23",
-    "estimated_cost": "23.32"
+    "has_power": "0"
 }
