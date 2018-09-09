@@ -68,6 +68,7 @@ String currentUID = "";
 
 //boolean for switching between Serial ports
 boolean isItMyTurn = true;
+
 //Connect to Wifi at Start UP
 //being called at the Setup phase
 void ATconnectToWifi(){
@@ -127,6 +128,7 @@ String getID() {
 void resetWattHour(){
   poweranalyzer.print("\002R\003"); //“\002”=STX, “\003”=ETX
   Serial.println("Power Analyzer Watt-Hr Reset");
+  isItMyTurn = true;
 }
 
 void poweranalyzerfunc(String UID){
@@ -182,7 +184,6 @@ void poweranalyzerfunc(String UID){
 
         //Send power data with UID
         String message = sendSignedPowerData(UID,voltString,ampString,powerString,watthrString);
-        isItMyTurn = false;
         Serial.println(message);
     }
   }
@@ -256,6 +257,7 @@ String sendSignedPowerData(String UID, String volt, String amp, String power, St
   wifiSerial.println(PHPmessage); // Print Data
 
   String catMessage = UID + "||" + message;
+  isItMyTurn = false;
   return catMessage;
 }
 
@@ -284,24 +286,32 @@ void findJSON(){
 
 void parseJSON(){
   int has_power;
+  
   Serial.print("");
   wifiSerial.listen();
-  while (wifiSerial.available() > 0 && isItMyTurn == false){
+  //while (wifiSerial.available() > 0 && isItMyTurn == false){
     String c = wifiSerial.readString();
     Serial.print(c);
     if (c.indexOf("\"has\_power\"\: \"0\"") > 0){
       Serial.println("has_power: 0");
       relayOff();
       isItMyTurn = true;
-      
+      //break;
     }
     if (c.indexOf("\"has\_power\"\: \"1\"") > 0){
       Serial.println("has_power: 1");
       relayOn();
       isItMyTurn = true;
-      
+      //break;
     }
-  }
+
+    if (c.indexOf("1,CLOSED") > 0 || c.indexOf("busy p") > 0){
+      Serial.println("Connection Lost, Reconnecting...");
+      ATconnectToWifi();
+      isItMyTurn = true;
+      //break;
+    }
+  //}
 }
 
 void setup() {
@@ -342,6 +352,12 @@ void setup() {
 void loop() {
  // put your main code here, to run repeatedly:
   while(isPluggedin()){
+    if(isItMyTurn == true){
+      Serial.println("isItMyTurn is true");
+    }
+     else {
+      Serial.println("isItMyTurn is false");
+     }
     delay(100);
     String pluggedAppliance = getID();
     if(pluggedAppliance != ""){
