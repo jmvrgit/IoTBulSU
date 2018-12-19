@@ -15,7 +15,7 @@ $db = $database->getConnection();
 $appliance = new Appliance($db);
  
 // get keywords
-$keywords=isset($_GET["uid"]) ? $_GET["uid"] : "";
+$keywords=isset($_GET["UID"]) ? $_GET["UID"] : "";
  
 // query products
 $stmt = $appliance->search($keywords);
@@ -36,17 +36,17 @@ if($num>0){
         extract($row);
  
         $appliance_arr=array(
-            "uid" => $uid,
-			"appl_name" => $appl_name,
+            //"uid" => $uid,
+			//"appl_name" => $appl_name,
 			"has_power" => $has_power,
-			"has_power_limit" => $has_power_limit,
-			"has_time_limit" => $has_time_limit,
-			"current_date_time" => $current_date_time,
-			"time_limit_value" => $time_limit_value,
-			"power_limit_value" => $power_limit_value,
-			"current_power_usage" => $current_power_usage,
-			"avg_watthr" => $avg_watthr,
-			"estimated_cost" => $estimated_cost
+			//"has_power_limit" => $has_power_limit,
+			//"has_time_limit" => $has_time_limit,
+			//"current_date_time" => $current_date_time,
+			//"time_limit_value" => $time_limit_value,
+			//"power_limit_value" => $power_limit_value,
+			//"current_power_usage" => $current_power_usage,
+			//"avg_watthr" => $avg_watthr,
+			//"estimated_cost" => $estimated_cost
         );
  
 
